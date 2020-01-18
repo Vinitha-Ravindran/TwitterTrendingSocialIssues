@@ -1,0 +1,40 @@
+CREATE DATABASE IF NOT EXISTS news_database;
+
+use news_database;
+
+CREATE EXTERNAL TABLE sentiment_demo (publication STRING, score FLOAT) ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t' STORED AS TEXTFILE;
+
+LOAD DATA INPATH '/user/cloudera/input/final_sent.txt' OVERWRITE INTO TABLE sentiment_demo;
+
+
+----------------sentiment score aggragation---------------------------
+create table net_sentiment as
+select publication, avg(score) as sentiment_score
+from sentiment_demo
+group by publication;
+-----------------------------------------------------------------------
+
+
+----------------merging dataset 1--------------------------------------
+use news_database;
+CREATE EXTERNAL TABLE climate_change (publication STRING, CC_count INT) ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t' STORED AS TEXTFILE;
+
+LOAD DATA INPATH '/user/cloudera/output/climate.txt' OVERWRITE INTO TABLE climate_change;
+
+create table publication_cc_sentiment as
+select a.publication, sentiment_score, cc_count
+from net_sentiment a left join climate_change b
+on a.publication = b.publication;
+------------------------------------------------------------------------
+
+---------------merging dataset 2----------------------------------------
+use news_database;
+CREATE EXTERNAL TABLE immigration (publication STRING, im_count INT) ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t' STORED AS TEXTFILE;
+
+LOAD DATA INPATH '/user/cloudera/output/immigration.txt' OVERWRITE INTO TABLE immigration;
+
+create table publication_im_sentiment as
+select a.publication, sentiment_score, im_count
+from net_sentiment a left join immigration b
+on a.publication = b.publication;
+-------------------------------------------------------------------------
